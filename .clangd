@@ -1,0 +1,15 @@
+CompileFlags:
+  Remove:
+    - -m*
+    - -fno-tree-switch-conversion
+    - -fstrict-volatile-bitfields
+    - -Wno-frame-address
+  Add:
+    - -nostdlibinc
+    - -nostdinc++
+    - -isystem
+    - /Users/mark-mini/.platformio/packages/toolchain-xtensa-esp32/xtensa-esp32-elf/include/c++/8.4.0
+    - -isystem
+    - /Users/mark-mini/.platformio/packages/toolchain-xtensa-esp32/xtensa-esp32-elf/include/c++/8.4.0/xtensa-esp32-elf
+    - -isystem
+    - /Users/mark-mini/.platformio/packages/toolchain-xtensa-esp32/xtensa-esp32-elf/include/c++/8.4.0/backward

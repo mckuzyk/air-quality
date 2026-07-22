@@ -1,0 +1,117 @@
+#include <cstddef>
+#include <cstdint>
+
+#pragma once
+
+constexpr size_t FRAME_SIZE = 32;
+
+enum BufferRaw {
+  BUF_STRT1 = 0,
+  BUF_STRT2,
+  BUF_FRM_HI,
+  BUF_FRM_LO,
+  BUF_D1_HI,
+  BUF_D1_LO,
+  BUF_D2_HI,
+  BUF_D2_LO,
+  BUF_D3_HI,
+  BUF_D3_LO,
+  BUF_D4_HI,
+  BUF_D4_LO,
+  BUF_D5_HI,
+  BUF_D5_LO,
+  BUF_D6_HI,
+  BUF_D6_LO,
+  BUF_D7_HI,
+  BUF_D7_LO,
+  BUF_D8_HI,
+  BUF_D8_LO,
+  BUF_D9_HI,
+  BUF_D9_LO,
+  BUF_D10_HI,
+  BUF_D10_LO,
+  BUF_D11_HI,
+  BUF_D11_LO,
+  BUF_D12_HI,
+  BUF_D12_LO,
+  BUF_D13_HI,
+  BUF_D13_LO,
+  BUF_CS_HI,
+  BUF_CS_LO
+};
+
+struct pms_frame {
+  uint8_t start_char1;
+  uint8_t start_char2;
+  uint16_t frame_length;
+  uint16_t pm_sp_1_0;
+  uint16_t pm_sp_2_5;
+  uint16_t pm_sp_10_0;
+  uint16_t pm_se_1_0;
+  uint16_t pm_se_2_5;
+  uint16_t pm_se_10_0;
+  uint16_t p_cnt_0_3;
+  uint16_t p_cnt_0_5;
+  uint16_t p_cnt_1_0;
+  uint16_t p_cnt_2_5;
+  uint16_t p_cnt_5_0;
+  uint16_t p_cnt_10_0;
+  uint16_t reserved;
+  uint16_t checksum;
+};
+
+enum CollectionState { HUNTING_42, HUNTING_4D, COLLECTING };
+
+struct frame_collector {
+  CollectionState state = HUNTING_42;
+  size_t idx = 0;
+  uint8_t buffer[FRAME_SIZE];
+
+  bool feed(uint8_t b) {
+    switch (state) {
+    case HUNTING_42:
+      if (b == 0x42) {
+        idx = 0;
+        state = HUNTING_4D;
+        buffer[idx] = b;
+        idx++;
+      }
+      break;
+    case HUNTING_4D:
+      if (b == 0x4D) {
+        state = COLLECTING;
+        buffer[idx] = b;
+        idx++;
+      } else if (b == 0x42) {
+        state = HUNTING_4D;
+        buffer[0] = b;
+        idx = 1;
+      } else {
+        reset();
+      }
+      break;
+    case COLLECTING:
+      buffer[idx] = b;
+      idx++;
+      if (idx >= FRAME_SIZE) {
+        reset();
+        return true;
+      }
+      break;
+    default:
+      reset();
+      break;
+    }
+    return false;
+  }
+
+  void reset() {
+    idx = 0;
+    state = HUNTING_42;
+  }
+};
+
+uint16_t make_word(uint8_t hi, uint8_t lo);
+bool checksum_ok(const uint8_t *buffer);
+bool start_bytes_ok(const uint8_t *buffer);
+pms_frame parse_message(const uint8_t *message);
