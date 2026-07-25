@@ -4,6 +4,8 @@
 #pragma once
 
 constexpr size_t FRAME_SIZE = 32;
+constexpr size_t MIN_FRAME_SIZE = 8;
+inline uint16_t make_word(uint8_t hi, uint8_t lo) { return (hi << 8) | lo; }
 
 enum BufferRaw {
   BUF_STRT1 = 0,
@@ -65,9 +67,10 @@ enum CollectionState { HUNTING_42, HUNTING_4D, COLLECTING };
 struct frame_collector {
   CollectionState state = HUNTING_42;
   size_t idx = 0;
+  size_t expected = FRAME_SIZE;
   uint8_t buffer[FRAME_SIZE];
 
-  bool feed(uint8_t b) {
+  size_t feed(uint8_t b) {
     switch (state) {
     case HUNTING_42:
       if (b == 0x42) {
@@ -91,18 +94,29 @@ struct frame_collector {
       }
       break;
     case COLLECTING:
-      buffer[idx] = b;
-      idx++;
-      if (idx >= FRAME_SIZE) {
+      buffer[idx++] = b;
+
+      if (idx == 4) {
+        // Frame size is remaining bytes only. Add 4 to include the header
+        size_t claimed = make_word(buffer[BUF_FRM_HI], buffer[BUF_FRM_LO]) + 4;
+        if (claimed < MIN_FRAME_SIZE || claimed > FRAME_SIZE) {
+          reset(); // implausible length -> drop and resync
+          break;
+        }
+        expected = claimed;
+      }
+
+      if (idx >= expected) {
+        size_t n = expected;
         reset();
-        return true;
+        return n;
       }
       break;
     default:
       reset();
       break;
     }
-    return false;
+    return 0;
   }
 
   void reset() {
@@ -111,7 +125,6 @@ struct frame_collector {
   }
 };
 
-uint16_t make_word(uint8_t hi, uint8_t lo);
-bool checksum_ok(const uint8_t *buffer);
+bool checksum_ok(const uint8_t *buffer, size_t n);
 bool start_bytes_ok(const uint8_t *buffer);
 pms_frame parse_message(const uint8_t *message);

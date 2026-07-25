@@ -14,13 +14,20 @@ void setup() {
 void loop() {
   static frame_collector frame_buf;
   while (Serial2.available()) {
-    if (frame_buf.feed(Serial2.read())) {
-      if (checksum_ok(frame_buf.buffer)) {
-        pms_frame frame = parse_message(frame_buf.buffer);
-        print_frame(frame);
-      } else {
-        Serial.println("frame dropped: checksum mismatch");
-      }
+    uint8_t b = Serial2.read();
+    size_t n = frame_buf.feed(b);
+    if (n == 0)
+      continue;
+
+    if (!checksum_ok(frame_buf.buffer, n)) {
+      Serial.println("Checksum failed, dropping buffer");
+    }
+
+    if (n == FRAME_SIZE) {
+      pms_frame frame = parse_message(frame_buf.buffer);
+      print_frame(frame);
+    } else {
+      Serial.printf("Received %u-byte control frame\n", (unsigned)n);
     }
   }
 }

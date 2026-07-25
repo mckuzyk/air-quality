@@ -1,11 +1,9 @@
 #include "pms_parser.h"
 
-uint16_t make_word(uint8_t hi, uint8_t lo) { return (hi << 8) | lo; }
-
-bool checksum_ok(const uint8_t *buffer) {
-  uint16_t checksum = make_word(buffer[BUF_CS_HI], buffer[BUF_CS_LO]);
+bool checksum_ok(const uint8_t *buffer, size_t n) {
+  uint16_t checksum = make_word(buffer[n - 2], buffer[n - 1]);
   uint16_t sum = 0;
-  for (size_t i = 0; i < FRAME_SIZE - 2; i++) {
+  for (size_t i = 0; i < n - 2; i++) {
     sum += buffer[i];
   };
   return sum == checksum;
