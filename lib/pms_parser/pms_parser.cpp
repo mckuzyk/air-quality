@@ -1,11 +1,17 @@
 #include "pms_parser.h"
 
-bool checksum_ok(const uint8_t *buffer, size_t n) {
-  uint16_t checksum = make_word(buffer[n - 2], buffer[n - 1]);
+uint16_t sum_bytes(const uint8_t *buffer, size_t n) {
+  // Sum first n bytes of buffer
   uint16_t sum = 0;
-  for (size_t i = 0; i < n - 2; i++) {
+  for (size_t i = 0; i < n; i++) {
     sum += buffer[i];
   };
+  return sum;
+}
+
+bool checksum_ok(const uint8_t *buffer, size_t n) {
+  uint16_t checksum = make_word(buffer[n - 2], buffer[n - 1]);
+  uint16_t sum = sum_bytes(buffer, n - 2);
   return sum == checksum;
 }
 
@@ -34,4 +40,44 @@ pms_frame parse_message(const uint8_t *message) {
   frame.checksum = make_word(message[BUF_CS_HI], message[BUF_CS_LO]);
 
   return frame;
+}
+
+size_t build_command(PmsCommand cmd, uint8_t *out) {
+  out[0] = 0x42;
+  out[1] = 0x4D;
+  switch (cmd) {
+  case PmsCommand::Read:
+    out[2] = 0xE2;
+    out[3] = 0x00;
+    out[4] = 0x00;
+    break;
+  case PmsCommand::PassiveMode:
+    out[2] = 0xE1;
+    out[3] = 0x00;
+    out[4] = 0x00;
+    break;
+  case PmsCommand::ActiveMode:
+    out[2] = 0xE1;
+    out[3] = 0x00;
+    out[4] = 0x01;
+    break;
+  case PmsCommand::Sleep:
+    out[2] = 0xE4;
+    out[3] = 0x00;
+    out[4] = 0x00;
+    break;
+  case PmsCommand::Wake:
+    out[2] = 0xE4;
+    out[3] = 0x00;
+    out[4] = 0x01;
+    break;
+  default:
+    return 0;
+  }
+
+  uint16_t checksum = sum_bytes(out, 5);
+  out[5] = checksum >> 8;
+  out[6] = 0xFF & checksum;
+
+  return COMMAND_FRAME_SIZE;
 }

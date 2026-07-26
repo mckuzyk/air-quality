@@ -1,18 +1,42 @@
 #include "HardwareSerial.h"
 #include "pms_parser.h"
 #include <Arduino.h>
+#include <cstddef>
 #include <cstdint>
 
 void print_frame(const pms_frame &f);
 
 void setup() {
   Serial.begin(115200);
+  delay(500);
   // (baud, config, RX)
-  Serial2.begin(9600, SERIAL_8N1, 16);
+  Serial2.begin(9600, SERIAL_8N1, 16, 17);
+
+  Serial.println("==== boot ====");
+
+  uint8_t cmd_buffer[COMMAND_FRAME_SIZE];
+  size_t n = build_command(PmsCommand::PassiveMode, cmd_buffer);
+  delay(2000);
+  Serial2.write(cmd_buffer, n);
+  delay(2000);
+  // Drain buffer
+  while (Serial2.available()) {
+    Serial2.read();
+  }
 }
 
 void loop() {
   static frame_collector frame_buf;
+  static unsigned long last_poll = 0;
+  constexpr unsigned long POLL_INTERVAL_MS = 3000;
+
+  if (millis() - last_poll >= POLL_INTERVAL_MS) {
+    last_poll = millis();
+    uint8_t cmd_buffer[COMMAND_FRAME_SIZE];
+    size_t n_cmd = build_command(PmsCommand::Read, cmd_buffer);
+    Serial2.write(cmd_buffer, n_cmd);
+  }
+
   while (Serial2.available()) {
     uint8_t b = Serial2.read();
     size_t n = frame_buf.feed(b);
@@ -21,6 +45,7 @@ void loop() {
 
     if (!checksum_ok(frame_buf.buffer, n)) {
       Serial.println("Checksum failed, dropping buffer");
+      continue;
     }
 
     if (n == FRAME_SIZE) {

@@ -5,6 +5,7 @@
 
 constexpr size_t FRAME_SIZE = 32;
 constexpr size_t MIN_FRAME_SIZE = 8;
+constexpr size_t COMMAND_FRAME_SIZE = 7;
 inline uint16_t make_word(uint8_t hi, uint8_t lo) { return (hi << 8) | lo; }
 
 enum BufferRaw {
@@ -42,6 +43,8 @@ enum BufferRaw {
   BUF_CS_LO
 };
 
+enum class PmsCommand : uint8_t { Read, PassiveMode, ActiveMode, Sleep, Wake };
+
 struct pms_frame {
   uint8_t start_char1;
   uint8_t start_char2;
@@ -63,6 +66,7 @@ struct pms_frame {
 };
 
 enum CollectionState { HUNTING_42, HUNTING_4D, COLLECTING };
+enum class ReadState { IDLE, AWAITING_RESPONSE };
 
 struct frame_collector {
   CollectionState state = HUNTING_42;
@@ -128,3 +132,5 @@ struct frame_collector {
 bool checksum_ok(const uint8_t *buffer, size_t n);
 bool start_bytes_ok(const uint8_t *buffer);
 pms_frame parse_message(const uint8_t *message);
+size_t build_command(PmsCommand cmd, uint8_t *out);
+uint16_t sum_bytes(const uint8_t *buffer, size_t n);
