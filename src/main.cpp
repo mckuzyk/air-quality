@@ -1,4 +1,6 @@
 #include "HardwareSerial.h"
+#include "esp32-hal.h"
+#include "interval_timer.h"
 #include "pms_parser.h"
 #include <Arduino.h>
 #include <cstddef>
@@ -27,14 +29,16 @@ void setup() {
 
 void loop() {
   static frame_collector frame_buf;
+  static IntervalTimer interval_timer = IntervalTimer(3000);
+
   static unsigned long last_poll = 0;
   constexpr unsigned long POLL_INTERVAL_MS = 3000;
 
-  if (millis() - last_poll >= POLL_INTERVAL_MS) {
-    last_poll = millis();
+  if (interval_timer.due(millis())) {
     uint8_t cmd_buffer[COMMAND_FRAME_SIZE];
     size_t n_cmd = build_command(PmsCommand::Read, cmd_buffer);
     Serial2.write(cmd_buffer, n_cmd);
+    interval_timer.reset(millis());
   }
 
   while (Serial2.available()) {
