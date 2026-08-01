@@ -7,6 +7,9 @@
 #include <cstddef>
 #include <cstdint>
 
+static frame_collector frame_buf;
+static IntervalTimer interval_timer = IntervalTimer(SAMPLE_PERIOD);
+
 void print_frame(const pms_frame &f);
 
 void setup() {
@@ -26,19 +29,16 @@ void setup() {
   while (Serial2.available()) {
     Serial2.read();
   }
+
+  interval_timer.reset(millis() - SAMPLE_PERIOD); // armed to fire at loop start
 }
 
 void loop() {
-  static frame_collector frame_buf;
-  static IntervalTimer interval_timer = IntervalTimer(SAMPLE_PERIOD);
-
-  static unsigned long last_poll = 0;
 
   if (interval_timer.due(millis())) {
     uint8_t cmd_buffer[COMMAND_FRAME_SIZE];
     size_t n_cmd = build_command(PmsCommand::Read, cmd_buffer);
     Serial2.write(cmd_buffer, n_cmd);
-    interval_timer.reset(millis());
   }
 
   while (Serial2.available()) {

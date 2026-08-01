@@ -4,8 +4,7 @@
 
 class IntervalTimer {
 public:
-  explicit IntervalTimer(uint32_t period_ms, bool fire_immediately = true)
-      : period_(period_ms), last_(fire_immediately ? (0 - period_ms) : 0) {}
+  explicit IntervalTimer(uint32_t period_ms) : period_(period_ms) {}
 
   void reset(uint32_t now) {
     last_ = now;
