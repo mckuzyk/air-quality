@@ -1,4 +1,5 @@
 #include "HardwareSerial.h"
+#include "config.h"
 #include "esp32-hal.h"
 #include "interval_timer.h"
 #include "pms_parser.h"
@@ -29,10 +30,9 @@ void setup() {
 
 void loop() {
   static frame_collector frame_buf;
-  static IntervalTimer interval_timer = IntervalTimer(3000);
+  static IntervalTimer interval_timer = IntervalTimer(SAMPLE_PERIOD);
 
   static unsigned long last_poll = 0;
-  constexpr unsigned long POLL_INTERVAL_MS = 3000;
 
   if (interval_timer.due(millis())) {
     uint8_t cmd_buffer[COMMAND_FRAME_SIZE];
